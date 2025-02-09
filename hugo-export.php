@@ -28,7 +28,7 @@ class Hugo_Export
 {
     protected $_tempDir = null;
     private $zip_folder = 'hugo-export/'; //folder zip file extracts to
-    private $post_folder = 'posts/'; //folder to place posts within
+    private $post_folder = 'content/posts/'; //folder to place posts within
 
     /**
      * Manually edit this private property and set it to TRUE if you want to export
@@ -36,7 +36,7 @@ class Hugo_Export
      *
      * @var bool
      */
-    private $include_comments = false; //export comments as part of the posts they're associated with
+    private $include_comments = TRUE; //export comments as part of the posts they're associated with
 
     public $rename_options = array('site', 'blog'); //strings to strip from option keys on export
 
@@ -111,7 +111,7 @@ class Hugo_Export
     {
         // Dates in the m/d/y or d-m-y formats are disambiguated by looking at the separator between the various components: if the separator is a slash (/),
         // then the American m/d/y is assumed; whereas if the separator is a dash (-) or a dot (.), then the European d-m-y format is assumed.
-        $unixTime = strtotime($post->post_date_gmt);
+        $unixTime = strtotime($post->post_date);
         return date('c', $unixTime);
     }
 
@@ -123,7 +123,7 @@ class Hugo_Export
         $output = array(
             'title' => html_entity_decode(get_the_title($post), ENT_QUOTES | ENT_XML1, 'UTF-8'),
             'author' => get_userdata($post->post_author)->display_name,
-            'type' => get_post_type($post),
+            // 'type' => get_post_type($post),
             'date' => $this->_getPostDateAsIso($post),
         );
         if (false === empty($post->post_excerpt)) {
@@ -248,11 +248,11 @@ class Hugo_Export
         }
 
         $converter = new Markdownify\ConverterExtra;
-        $output = "\n\n## Comments";
+        $output = "\n\n#### Comments";
         foreach ($comments as $comment) {
             $content = apply_filters('comment_text', $comment->comment_content);
-            $output .= "\n\n### Comment by " . $comment->comment_author . " on " . get_comment_date("Y-m-d H:i:s O", $comment) . "\n";
-            $output .= $converter->parseString($content);
+            $output .= "\n\n##### Comment by " . $comment->comment_author . " on " . get_comment_date("Y-m-d H:i:s O", $comment) . "\n";
+            $output .= preg_replace('/^/m', "> ", $converter->parseString($content));
         }
 
         return $output;
@@ -326,6 +326,7 @@ class Hugo_Export
         $this->dir = $this->getTempDir() . 'wp-hugo-' . md5(time()) . '/';
         $this->zip = $this->getTempDir() . 'wp-hugo.zip';
         $wp_filesystem->mkdir($this->dir);
+        $wp_filesystem->mkdir($this->dir . "content" );
         $wp_filesystem->mkdir($this->dir . $this->post_folder);
         $wp_filesystem->mkdir($this->dir . 'wp-content/');
 
